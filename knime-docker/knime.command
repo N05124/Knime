@@ -1,0 +1,48 @@
+#!/bin/bash
+set -Eeuo pipefail
+cd "$(dirname "$0")"
+
+fail() { printf '\nERROR: %s\n' "$*" >&2; read -r -p 'Press Return to close...' _ || true; exit 1; }
+trap 'fail "KNIME launch failed at line $LINENO. Check the error above."' ERR
+
+[[ "$(uname -s)" == "Darwin" ]] || fail 'This launcher is for macOS.'
+[[ -d /Applications/Docker.app || -d "$HOME/Applications/Docker.app" ]] || fail 'Docker Desktop is not installed. Install it before launching KNIME.'
+
+if ! docker info >/dev/null 2>&1; then
+  echo 'Starting Docker Desktop...'
+  open -a Docker || fail 'Could not open Docker Desktop.'
+  echo 'Waiting for Docker engine (up to 180 seconds)...'
+  ready=0
+  for ((i=0; i<90; i++)); do
+    if docker info >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+  done
+  [[ "$ready" == 1 ]] || fail 'Docker engine did not become ready within 180 seconds.'
+else
+  echo 'Docker engine is already running.'
+fi
+
+command -v docker >/dev/null 2>&1 || fail 'docker CLI not found. Check Docker Desktop installation.'
+docker compose version >/dev/null 2>&1 || fail 'Docker Compose v2 is unavailable.'
+mkdir -p workspace data
+
+echo 'Building (if needed) and starting KNIME...'
+docker compose -f compose.yaml up --build -d
+
+echo 'Waiting for KNIME web desktop...'
+ready=0
+for ((i=0; i<60; i++)); do
+  if curl -fsS --max-time 2 http://127.0.0.1:6080/vnc.html >/dev/null 2>&1; then ready=1; break; fi
+  sleep 2
+done
+if [[ "$ready" == 1 ]]; then
+  open 'http://127.0.0.1:6080/vnc.html'
+  echo 'KNIME browser desktop opened. Click Connect. The KNIME application may still be starting.'
+else
+  echo 'Container started, but web desktop is not responding yet.'
+  echo 'Check logs: docker compose logs --tail=100 knime'
+  echo 'Try opening http://127.0.0.1:6080/vnc.html later.'
+fi
+echo 'To stop: cd "'"$(pwd)"'" && docker compose down'
+read -r -p 'Press Return to close this window...' _ || true
+

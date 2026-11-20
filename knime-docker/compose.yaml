@@ -1,0 +1,16 @@
+services:
+  knime:
+    build:
+      context: .
+      args:
+        KNIME_URL: https://download.knime.com/analytics-platform/linux/knime-full-latest-linux.gtk.x86_64.tar.gz
+    platform: linux/amd64
+    container_name: knime-analytics
+    ports:
+      - "127.0.0.1:6080:6080"
+    volumes:
+      - ./workspace:/home/knime/workspace
+      - ./data:/home/knime/data
+    shm_size: 2gb
+    mem_limit: 8g
+    restart: "no"

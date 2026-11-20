@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+Xvfb :99 -screen 0 1600x900x24 -nolisten tcp &
+export DISPLAY=:99
+sleep 2
+xfce4-session >/tmp/xfce.log 2>&1 &
+x11vnc -display :99 -localhost -forever -shared -nopw -rfbport 5900 >/tmp/vnc.log 2>&1 &
+websockify --web=/usr/share/novnc/ 0.0.0.0:6080 localhost:5900 >/tmp/novnc.log 2>&1 &
+exec /opt/knime/knime -data /home/knime/workspace -consoleLog

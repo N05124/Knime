@@ -1,0 +1,12 @@
+# Official KNIME executor image (headless, amd64 only; emulated on Apple Silicon).
+services:
+  knime-executor:
+    image: knime/knime:r-5.11.0-642
+    platform: linux/amd64
+    container_name: knime-executor
+    command: ["sleep", "infinity"]   # image default is bash; keep it alive so you can exec into it
+    volumes:
+      - ../workspace:/home/knime/workspace
+      - ../data:/home/knime/data
+    shm_size: 2gb
+    restart: "no"

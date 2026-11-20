@@ -1,0 +1,13 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl tar python3 python3-pip python3-venv xfce4 xfce4-terminal x11vnc xvfb novnc websockify dbus-x11 libgtk-3-0 libwebkit2gtk-4.0-37 libnss3 libasound2 libgbm1 libxss1 libxtst6 libxrender1 libxi6 libxrandr2 libxinerama1 libgl1 libglu1-mesa fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
+ARG KNIME_URL=https://download.knime.com/analytics-platform/linux/knime-full-latest-linux.gtk.x86_64.tar.gz
+RUN mkdir -p /opt/knime && curl -fL --retry 3 "$KNIME_URL" -o /tmp/knime.tar.gz && tar -xzf /tmp/knime.tar.gz -C /opt/knime --strip-components=1 && rm /tmp/knime.tar.gz && test -x /opt/knime/knime
+RUN useradd -m -u 1000 knime && mkdir -p /home/knime/workspace /home/knime/data && chown -R knime:knime /home/knime
+COPY start.sh /usr/local/bin/start-knime
+RUN chmod +x /usr/local/bin/start-knime
+USER knime
+ENV HOME=/home/knime DISPLAY=:99
+WORKDIR /home/knime
+EXPOSE 6080
+CMD ["/usr/local/bin/start-knime"]
