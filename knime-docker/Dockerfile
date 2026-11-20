@@ -2,8 +2,17 @@ FROM --platform=linux/amd64 ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates && sed -i 's@http://@https://@g' /etc/apt/sources.list && apt-get update && apt-get install -y --no-install-recommends ca-certificates curl tar python3 python3-pip python3-venv xfce4 xfce4-terminal x11vnc xvfb novnc websockify dbus-x11 libgtk-3-0 libwebkit2gtk-4.0-37 libnss3 libasound2 libgbm1 libxss1 libxtst6 libxrender1 libxi6 libxrandr2 libxinerama1 libgl1 libglu1-mesa fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
 ARG KNIME_URL=https://download.knime.com/analytics-platform/linux/knime-full-latest-linux.gtk.x86_64.tar.gz
-COPY knime.tar.gz /tmp/knime.tar.gz
+# Use a pre-downloaded knime.tar.gz from this folder if one exists; otherwise download it.
+# (start.sh is listed so the COPY never fails when the optional knime*.tar.gz is absent.)
+COPY start.sh knime*.tar.gz /tmp/knime-src/
 RUN mkdir -p /opt/knime && \
+    if [ -f /tmp/knime-src/knime.tar.gz ]; then \
+      echo "Using local knime.tar.gz"; mv /tmp/knime-src/knime.tar.gz /tmp/knime.tar.gz; \
+    else \
+      echo "No local knime.tar.gz; downloading $KNIME_URL"; \
+      curl -fL --retry 3 "$KNIME_URL" -o /tmp/knime.tar.gz; \
+    fi && \
+    rm -rf /tmp/knime-src && \
     tar -xzf /tmp/knime.tar.gz -C /opt/knime --strip-components=1 && \
     rm /tmp/knime.tar.gz && \
     test -x /opt/knime/knime
